@@ -274,38 +274,12 @@ bool AThirdPersonMPCharacter::RPC_BroadcastInput_Validate(const TArray<FMyPlayer
 
 void AThirdPersonMPCharacter::RPC_BroadcastInput_Implementation(const TArray<FMyPlayerInput>& input)
 {
-	TSubclassOf<AActor> ClassToFind; // Needs to be populated somehow (e.g. by exposing to blueprints as uproperty and setting it there
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ClassToFind, FoundActors);
-	
 
 	//移动PlayId不等于参数的玩家位置
-	auto moveOtherPlayers = [&](int myPlayerId)->void {
-		for (AActor* _actor : FoundActors)
-		{
-			if (_actor->IsA(AThirdPersonMPCharacter::StaticClass))
-			{
-				APawn* Pawn = Cast<APawn>(_actor);
-				APlayerController* pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-				/*			if (_actor->GetController()->PlayerState)
-							{
-
-							}*/
-			}
 
 
 
-			/*AThirdPersonMPCharacter* actor = Cast<AThirdPersonMPCharacter>(_actor);
-			if (actor)
-			{
-
-			}
-			*/
-		}
-	};
-
-	auto func = [&](const TArray<FMyPlayerInput>& _input)->void {
-		for (const FMyPlayerInput& _ : _input)
+		for (const FMyPlayerInput& _ : input)
 		{
 			
 			FString message = FString::Printf(TEXT("ServerGetInputDir %f"), _.InputValue);
@@ -315,12 +289,10 @@ void AThirdPersonMPCharacter::RPC_BroadcastInput_Implementation(const TArray<FMy
 			{
 				this->SetActorLocationAndRotation(ActorItr->GetActorLocation(), ActorItr->GetActorRotation(), false);
 			}*/
-		
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, message);
+			MoveOtherPlayers(_);
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, message);
 			//UE_LOG(LogTemp, Warning, TEXT("ServerGetInputDir %f %f", _.InputValue, _.InputDir));
 		}
-	};
-	func(input);
 }
 
 //int AThirdPersonMPCharacter::GetPlayerId(AActor& _actor)
@@ -333,6 +305,64 @@ void AThirdPersonMPCharacter::RPC_BroadcastInput_Implementation(const TArray<FMy
 //	}
 //}
 
+void AThirdPersonMPCharacter::MoveOtherPlayers(const FMyPlayerInput& input)
+{
+	TSubclassOf<AThirdPersonMPCharacter> ClassToFind; // Needs to be populated somehow (e.g. by exposing to blueprints as uproperty and setting it there
+	TArray<AActor*> FoundActors;
+	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ClassToFind, FoundActors);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AThirdPersonMPCharacter::StaticClass(), FoundActors);
+	for (AActor* _actor : FoundActors)
+	{
+		//for (TActorIterator<AThirdPersonMPCharacter> It(GetWorld()); It; ++It)
+		//{
+		//	//ATestcActor* TestcActor = (ATestcActor*)(*It);
+		//	if (TestcActor)
+		//	{
+		//		return TestcActor;
+		//	}
+		//}
+
+		//if (_actor->IsA(AThirdPersonMPCharacter::StaticClass))
+		//{
+		//		APawn* Pawn = Cast<APawn>(_actor);
+		//		APlayerController* pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+		///*		if (_actor->GetController()->PlayerState)
+		//		{
+
+		//		}*/
+		//}
+		FString message = FString::Printf(TEXT("Find"));
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, message);
+		AThirdPersonMPCharacter* actor = Cast<AThirdPersonMPCharacter>(_actor);
+		if (actor)
+		{
+			FString message2 = FString::Printf(TEXT("Find2"));
+
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, message2);
+			int curUID = GetUId(actor);
+			if (input.UID == GetPlayerId())
+			{
+				continue;
+			}
+			if (input.UID == curUID)
+			{
+				FVector dir = (input.InputDir == EPlayerInputEnum::Forward || input.InputDir == EPlayerInputEnum::Back) ? GetActorForwardVector() : GetActorRightVector();
+				actor->AddMovementInput(dir, input.InputValue);
+			}
+			//=Todo:获取Actor的PlayerId,只要与参数相同，就执行运动
+		}
+	}
+};
+
+int AThirdPersonMPCharacter::GetUId(AActor* actor)
+{
+
+	APawn* Pawn = Cast<APawn>(actor);
+	AController* PC = Pawn->GetController();
+	int res = PC->PlayerState->GetPlayerId();
+	return res;
+}
 
 int AThirdPersonMPCharacter::GetPlayerId()
 {
@@ -348,7 +378,6 @@ int AThirdPersonMPCharacter::GetPlayerId()
 		return playerId;
 		//UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	}
-	//AController* controller = GetController();
 	return 1;
 }
 

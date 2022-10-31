@@ -159,7 +159,7 @@ protected:
 
 
 
-
+	void MoveOtherPlayers(const FMyPlayerInput&);
 	/** Handles moving forward/backward */
 	void MoveForward(float Val);
 
@@ -189,5 +189,6 @@ public:
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	int GetPlayerId();
+	int GetUId(AActor* actor);
 };
 
