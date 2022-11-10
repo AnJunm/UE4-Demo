@@ -131,7 +131,7 @@ void AThirdPersonMPCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
-	PrimaryActorTick.bCanEverTick = true;
+	//PrimaryActorTick.bCanEverTick = true;
 	//Attach gun mesh component to Skeleton, doing it here because the skeleton is not yet created in the constructor
 	FP_Gun->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
 	Mesh1P->SetHiddenInGame(false, true);
@@ -155,12 +155,11 @@ void AThirdPersonMPCharacter::Tick(float DeltaSeconds)
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		FString healthMessage = FString::Printf(TEXT("Tick has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		RPC_SendInput(m_Input);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		m_Input.UID = GetPlayerId();
+		m_Input.InputValue = 0;	
+		Server_SendInput(m_Input);
 	}
-
 }
-
 
 void AThirdPersonMPCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -187,11 +186,6 @@ void AThirdPersonMPCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AThirdPersonMPCharacter::LookUpAtRate);
 }
-
-//void AThirdPersonMPCharacter::Tick()
-//{
-//
-//}
 
 void AThirdPersonMPCharacter::OnFire()
 {
@@ -234,15 +228,9 @@ void AThirdPersonMPCharacter::OnFire()
 	}
 }
 
-////Server_OnFire(FVector::ZeroVector, FRotator::ZeroRotator);
-//void AThirdPersonMPCharacter::Server_OnFire(FVector Location, FRotator Rotation)
-//{
-//
-//}
-
 bool AThirdPersonMPCharacter::Server_OnFire_Validate(FVector Location, FRotator Rotation)
 {
-	return GetLocalRole() < ROLE_Authority;
+	return GetLocalRole() == ROLE_Authority;
 }
 
 void AThirdPersonMPCharacter::Server_OnFire_Implementation(FVector Location, FRotator Rotation)
@@ -252,12 +240,12 @@ void AThirdPersonMPCharacter::Server_OnFire_Implementation(FVector Location, FRo
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 }
 
-bool AThirdPersonMPCharacter::RPC_SendInput_Validate(FMyPlayerInput input)
+bool AThirdPersonMPCharacter::Server_SendInput_Validate(FMyPlayerInput input)
 {
 	return (GetLocalRole() == ROLE_Authority);
 }
 
-void AThirdPersonMPCharacter::RPC_SendInput_Implementation(FMyPlayerInput input)
+void AThirdPersonMPCharacter::Server_SendInput_Implementation(FMyPlayerInput input)
 {
 	ClientInput.Add(input);
 	if (ClientInput.Num() == 2)
@@ -269,82 +257,37 @@ void AThirdPersonMPCharacter::RPC_SendInput_Implementation(FMyPlayerInput input)
 
 bool AThirdPersonMPCharacter::RPC_BroadcastInput_Validate(const TArray<FMyPlayerInput>& input)
 {
-	return (GetLocalRole() == ROLE_Authority);
+	return true;
 }
 
 void AThirdPersonMPCharacter::RPC_BroadcastInput_Implementation(const TArray<FMyPlayerInput>& input)
 {
-
 	//移动PlayId不等于参数的玩家位置
-
-
-
-		for (const FMyPlayerInput& _ : input)
-		{
-			
-			FString message = FString::Printf(TEXT("ServerGetInputDir %f"), _.InputValue);
-			//UE_LOG(LogTemp, Warning, message.);
-
-	/*		for (AThirdPersonMPCharacter ActorItr<AThirdPersonMPCharacter>(GetWorld()); ActorItr; ++ActorItr)
-			{
-				this->SetActorLocationAndRotation(ActorItr->GetActorLocation(), ActorItr->GetActorRotation(), false);
-			}*/
-			MoveOtherPlayers(_);
-			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, message);
-			//UE_LOG(LogTemp, Warning, TEXT("ServerGetInputDir %f %f", _.InputValue, _.InputDir));
-		}
+	for (const FMyPlayerInput& _ : input)
+	{
+		MoveOtherPlayers(_);
+	}
 }
 
-//int AThirdPersonMPCharacter::GetPlayerId(AActor& _actor)
-//{
-//	
-//	AThirdPersonMPCharacter* actor = Cast<AThirdPersonMPCharacter>(_actor);
-//	if (actor)
-//	{
-//
-//	}
-//}
-
+#pragma optimize( "", off) 
 void AThirdPersonMPCharacter::MoveOtherPlayers(const FMyPlayerInput& input)
 {
 	TSubclassOf<AThirdPersonMPCharacter> ClassToFind; // Needs to be populated somehow (e.g. by exposing to blueprints as uproperty and setting it there
 	TArray<AActor*> FoundActors;
-	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ClassToFind, FoundActors);
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AThirdPersonMPCharacter::StaticClass(), FoundActors);
 	for (AActor* _actor : FoundActors)
 	{
-		//for (TActorIterator<AThirdPersonMPCharacter> It(GetWorld()); It; ++It)
-		//{
-		//	//ATestcActor* TestcActor = (ATestcActor*)(*It);
-		//	if (TestcActor)
-		//	{
-		//		return TestcActor;
-		//	}
-		//}
-
-		//if (_actor->IsA(AThirdPersonMPCharacter::StaticClass))
-		//{
-		//		APawn* Pawn = Cast<APawn>(_actor);
-		//		APlayerController* pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-		///*		if (_actor->GetController()->PlayerState)
-		//		{
-
-		//		}*/
-		//}
-		FString message = FString::Printf(TEXT("Find"));
-
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, message);
 		AThirdPersonMPCharacter* actor = Cast<AThirdPersonMPCharacter>(_actor);
 		if (actor)
 		{
-			FString message2 = FString::Printf(TEXT("Find2"));
-
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, message2);
+			//curUID是当前actor所属玩家的id, 而input.UID是服务器同步给所有玩家的操作数据，GetPlayerId是当前玩家的uid
 			int curUID = GetUId(actor);
+			//如果UID相等则不做操作
 			if (input.UID == GetPlayerId())
 			{
 				continue;
 			}
+			//curUID是当前角色的UID,只要和输入的一致，就去移动
 			if (input.UID == curUID)
 			{
 				FVector dir = (input.InputDir == EPlayerInputEnum::Forward || input.InputDir == EPlayerInputEnum::Back) ? GetActorForwardVector() : GetActorRightVector();
@@ -357,7 +300,6 @@ void AThirdPersonMPCharacter::MoveOtherPlayers(const FMyPlayerInput& input)
 
 int AThirdPersonMPCharacter::GetUId(AActor* actor)
 {
-
 	APawn* Pawn = Cast<APawn>(actor);
 	AController* PC = Pawn->GetController();
 	int res = PC->PlayerState->GetPlayerId();
@@ -367,29 +309,23 @@ int AThirdPersonMPCharacter::GetUId(AActor* actor)
 int AThirdPersonMPCharacter::GetPlayerId()
 {
 	UGameInstance* GameInstance = GetWorld()->GetGameInstance();
-	//AController* controller = GameInstance->GetFirstGamePlayer();
 	for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
 	{
-		//APlayerController* controller = Iterator->Get();
 		AController* controller = Iterator->Get();
-		//int playerId = Cast<AController, APlayerController>(controller)->GetPlayerState<APlayerState>()->GetPlayerId();
 		APlayerState* PC = controller->PlayerState;
 		int playerId = PC->GetPlayerId();
 		return playerId;
-		//UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	}
 	return 1;
 }
-
+#pragma optimize( "", on) 
 void AThirdPersonMPCharacter::MoveForward(float Value)
 {
 	if (Value != 0.0f)
 	{
-		// add movement in that direction
 		EPlayerInputEnum dir = Value < 0 ? EPlayerInputEnum(EPlayerInputEnum::Back) : EPlayerInputEnum(EPlayerInputEnum::Forward);
 		m_Input.InputValue = Value;
 		m_Input.InputDir = dir;
-		m_Input.UID = GetPlayerId();
 		AddMovementInput(GetActorForwardVector(), Value);
 	}
 }
@@ -398,11 +334,9 @@ void AThirdPersonMPCharacter::MoveRight(float Value)
 {
 	if (Value != 0.0f)
 	{
-		// add movement in that direction
 		EPlayerInputEnum dir = Value < 0 ? EPlayerInputEnum(EPlayerInputEnum::Left) : EPlayerInputEnum(EPlayerInputEnum::Right);
 		m_Input.InputValue = Value;
 		m_Input.InputDir = dir;
-		m_Input.UID = GetPlayerId();
 		AddMovementInput(GetActorRightVector(), Value);
 	}
 }

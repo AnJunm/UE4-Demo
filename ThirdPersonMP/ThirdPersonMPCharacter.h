@@ -148,9 +148,9 @@ protected:
 	void Server_OnFire_Implementation(FVector Location, FRotator Rotation);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void RPC_SendInput(FMyPlayerInput input);
-	bool RPC_SendInput_Validate(FMyPlayerInput input);
-	void RPC_SendInput_Implementation(FMyPlayerInput input);
+	void Server_SendInput(FMyPlayerInput input);
+	bool Server_SendInput_Validate(FMyPlayerInput input);
+	void Server_SendInput_Implementation(FMyPlayerInput input);
 
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
 	void RPC_BroadcastInput(const TArray<FMyPlayerInput>& input);
